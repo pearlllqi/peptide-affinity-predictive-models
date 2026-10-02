@@ -18,7 +18,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data/htsk.csv"
-DDIM = ROOT / "outputs/ddim_double_retrained_baselines/manuscript_ddim15_reference.csv"
+DDIM = ROOT / "data/ddim_15_sequences.csv"
 OUT = ROOT / "outputs/mixed_lstm_transformer_200epochs"
 OUT.mkdir(parents=True, exist_ok=True)
 AA = "ACDEFGHIKLMNPQRSTVWY"

@@ -11,7 +11,7 @@ from scipy.stats import pearsonr, spearmanr
 
 ROOT=Path(__file__).resolve().parents[1]
 DATA=Path(os.environ.get('COMPACT_TRANSFORMER_DATA',str(ROOT/'data/htsk.csv')))
-DDIM=ROOT/'outputs/ddim_double_retrained_baselines/manuscript_ddim15_reference.csv'
+DDIM=ROOT/'data/ddim_15_sequences.csv'
 OUT=Path(os.environ.get('COMPACT_TRANSFORMER_OUT',str(ROOT/'outputs/combined_compact_transformer')))
 OUT.mkdir(parents=True,exist_ok=True)
 AA='ACDEFGHIKLMNPQRSTVWY'; TOK={a:i for i,a in enumerate(AA)}; SEEDS=(42,43,44)

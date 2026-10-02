@@ -1,0 +1,67 @@
+study:
+  target: Bcl-xL
+  dataset: pooled_extension_doped_htsk
+  data_file: data/pooled_extension_doped_htsk.csv
+  target_column: Delta_G
+  target_range_kcal_mol: [-16.0, -12.0]
+  sequence_column: Sequence
+  sequence_length: 20
+  amino_acid_alphabet: ACDEFGHIKLMNPQRSTVWY
+
+evaluation:
+  seeds: [42, 43, 44]
+  train_fraction: 0.70
+  validation_fraction: 0.15
+  test_fraction: 0.15
+  split_method: seeded_row_shuffle
+  target_scaling: training_mean_population_sd
+  aggregate: arithmetic_mean_and_sample_sd
+  metrics: [MSE, RMSE, MAE, R2, Pearson, Spearman]
+
+neural_training:
+  optimizer: AdamW
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  batch_size: 64
+  epochs: 70
+  loss: Huber
+  huber_delta: 0.5
+  gradient_clip_global_norm: 1.0
+  early_stopping: false
+  reported_checkpoint: final_epoch_70
+
+models:
+  cnn:
+    encoding: positional_one_hot_20x20
+    architecture: [Conv1D_64_k3_ReLU, Conv1D_64_k3_ReLU, GlobalMaxPool, Dense_32_ReLU, Dropout_0.20, LinearOutput]
+    initialization: He_normal_for_convolution_and_hidden_layers; fan_in_normal_for_output
+  gbdt:
+    encoding: flattened_positional_one_hot_400
+    estimator: HistGradientBoostingRegressor
+    loss: squared_error
+    l2_regularization: 0.0001
+    early_stopping: false
+    validation_grid:
+      learning_rate: [0.03, 0.05]
+      max_leaf_nodes: [15, 31]
+      max_iter: [200, 500]
+  compact_transformer:
+    encoding: integer_amino_acid_tokens
+    d_model: 64
+    encoder_layers: 2
+    attention_heads: 4
+    feedforward_units: 128
+    dropout: 0.15
+    activation: GELU
+    pooling: sequence_mean
+    positional_embedding_initialization: normal_sd_0.02
+  lstm:
+    encoding: positional_one_hot_20x20
+    layers: 1
+    hidden_units: 64
+    head: Dense_16_tanh_Dropout_0.20_LinearOutput
+    initialization: PyTorch_defaults
+  cfc:
+    encoding: positional_one_hot_20x20
+    architecture: LayerNorm_Dense32_tanh_CfC32_sequence_Dropout0.20_Dense16_tanh_CfC16_final_Dropout0.20_LinearOutput
+    initialization: PyTorch_and_ncps_defaults

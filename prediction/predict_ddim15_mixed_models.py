@@ -13,7 +13,7 @@ from scipy.stats import pearsonr, spearmanr
 
 ROOT=Path(__file__).resolve().parents[1]
 DATA=ROOT/'data/htsk.csv'
-REF=ROOT/'outputs/ddim_double_retrained_baselines/manuscript_ddim15_reference.csv'
+REF=ROOT/'data/ddim_15_sequences.csv'
 SAVED=ROOT/'outputs/current_logic_lstm_gbt'
 OUT=ROOT/'outputs/mixed_train_ddim15'
 OUT.mkdir(parents=True,exist_ok=True)

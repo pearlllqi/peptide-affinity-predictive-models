@@ -14,15 +14,10 @@ AA = "ACDEFGHIKLMNPQRSTVWY"
 AA_INDEX = {aa: i for i, aa in enumerate(AA)}
 SEEDS = (42, 43, 44)
 
-CLONES = pd.DataFrame({
-    "Clone": ["DDIM-HTSK5", "DDIM-HTSK6", "DDIM-HTSK7", "DDIM-HTSK8"],
-    "Sequence": [
-        "MIETIWIYLYKKAADHFPAGM",
-        "MIDWIIIKNYKKAARHFNMFI",
-        "MIDPITIQNYKMAAFHFYMSI",
-        "MISQVSILQYKRCAHHFFMSL",
-    ],
-})
+CLONES = (
+    pd.read_csv(ROOT / "data" / "ddim_htsk5_8_sequences.csv")
+    .rename(columns={"Full_Sequence": "Sequence"})[["Clone", "Sequence"]]
+)
 
 def one_hot(sequences):
     x = np.zeros((len(sequences), 20, 20), np.float32)

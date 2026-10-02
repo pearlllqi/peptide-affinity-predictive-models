@@ -1,47 +1,59 @@
 # Peptide-affinity predictive models for Bcl-xL
 
-This repository contains the data, training code, evaluation utilities, model
-outputs, and per-seed results supporting the manuscript *Integrating Diffusion
-and Liquid AI Models for Predicting Peptide Affinity from mRNA Display
-Selections*.
+This repository contains the data, training and evaluation code, deposited
+model artifacts, and per-seed results supporting the manuscript *Integrating
+Diffusion and Liquid AI Models for Predicting Peptide Affinity from mRNA
+Display Selections*.
 
-The code compares multiple sequence-based approaches for predicting peptide
-binding affinity:
+The primary study compares five sequence-based affinity-prediction models on
+the same repeated-holdout design:
 
 - convolutional neural network (CNN);
 - gradient-boosted decision trees (GBDT);
 - compact Transformer;
 - long short-term memory network (LSTM);
-- closed-form continuous network (CfC);
-- multilayer perceptron (MLP) and ridge-regression baselines.
+- closed-form continuous network (CfC).
 
-The repository also includes scripts for scoring diffusion-generated peptide
-candidates with the trained predictive models.
+MLP and ridge-regression baselines and scripts for scoring diffusion-generated
+peptide candidates are also included.
 
 ## Study design
 
-The primary comparison uses 17,804 unique 20-residue peptide sequences with
-experimental binding free energies from -16 to -12 kcal/mol. For each random
-seed (42, 43, and 44), the rows are reshuffled and divided into 70% training,
-15% validation, and 15% test partitions. Target standardization is calculated
-from the training subset only and reversed before evaluation.
+The primary comparison uses 17,804 valid, unique 20-residue peptide sequences
+from the pooled Extension and Doped HTSK dataset, with experimental binding
+free energies from -16 to -12 kcal/mol. Seeds 42, 43, and 44 define three
+independently shuffled 70% training, 15% validation, and 15% test partitions.
+Target standardization is calculated from the training partition only and
+reversed before evaluation.
 
-All test metrics are calculated independently for the three repeated holdout
-trials and summarized as the arithmetic mean ± sample standard deviation. The
-reported metrics include MSE, RMSE, MAE, R², Pearson correlation, and Spearman
-rank correlation.
+MSE, RMSE, MAE, R², Pearson correlation, and Spearman correlation are computed
+separately on each held-out test partition and summarized as the arithmetic
+mean ± sample standard deviation across the three trials.
 
-## Repository structure
+## Repository contents
 
 ```text
-data/          HTSK sequence-affinity dataset
-training/      training scripts for the compared predictive models
-evaluation/    metric compilation, checkpoint evaluation, and plotting tools
+configs/       shared data, model, training, and evaluation configuration
+data/          pooled HTSK data and DDIM candidate tables
+training/      training scripts for all compared predictive models
+evaluation/    checkpoint verification, metric compilation, and plotting tools
 prediction/    scripts for scoring diffusion-generated peptide candidates
-models/        deposited trained-model checkpoints
-results/       per-seed metrics and three-seed summaries
-docs/          example/reference input files
+checkpoints/   deposited trained CfC checkpoints for seeds 42, 43, and 44
+results/       per-seed metrics, mean/SD summaries, and test predictions
+docs/          detailed reproducibility instructions
 ```
+
+## Data files
+
+- `data/pooled_extension_doped_htsk.csv`: pooled HTSK sequence-affinity table
+  used for the primary model comparison.
+- `data/htsk.csv`: compatibility copy used by existing script defaults.
+- `data/ddim_15_sequences.csv`: 15 DDIM/FG candidates and associated
+  experimental measurements.
+- `data/ddim_htsk5_8_sequences.csv`: DDIM-HTSK5 through DDIM-HTSK8.
+
+The primary table contains `Sequence`, `Kd_M`, and `Delta_G` columns. Model
+training uses the 20-residue `Sequence` and the experimental `Delta_G` target.
 
 ## Model training scripts
 
@@ -54,16 +66,15 @@ docs/          example/reference input files
 | Additional LSTM/Transformer analysis | `training/train_lstm_transformer.py` |
 | Extension-only exploratory baselines | `training/extension_*_baseline.py` |
 
-The primary models use the same three random seeds and repeated 70:15:15
-holdout design. Neural-network training uses AdamW with a learning rate of
-`1e-4`, weight decay of `1e-4`, batch size 64, Huber loss with delta 0.5,
-global gradient-norm clipping at 1.0, and 70 epochs. GBDT hyperparameters are
-selected on the validation partition. See the individual scripts and manuscript
-Methods for model-specific architectures and settings.
+All primary models use seeds 42, 43, and 44 and the repeated 70:15:15 split.
+Shared and model-specific settings—including architecture, initialization,
+regularization, optimization, and early-stopping behavior—are recorded in
+`configs/mixed_dataset_config.yaml` and in the executable scripts.
 
 ## Installation
 
-Python 3.11 was used for the deposited analyses.
+Python 3.11 and pinned package versions are provided in both
+`requirements.txt` and `environment.yml`.
 
 ```bash
 python -m venv .venv
@@ -71,49 +82,61 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-## Input data
-
-The included file `data/htsk.csv` contains the sequence-affinity data used for
-the primary model comparison. The required columns are:
-
-- `Sequence`: exactly 20 standard amino-acid letters after removal of the
-  initiating methionine;
-- `Delta_G`: experimental binding free energy in kcal/mol.
-
-The primary training scripts use `data/htsk.csv` by default or accept a data
-path through a command-line option or environment variable. Example commands
-from the repository root are:
+Alternatively:
 
 ```bash
-python training/train_cnn_mlp_ridge.py --data data/htsk.csv
-python training/train_lstm_gbt.py --data data/htsk.csv
-COMPACT_TRANSFORMER_DATA=data/htsk.csv python training/train_compact_transformer.py
-python training/train_cfc.py --data data/htsk.csv --out outputs/cfc_repeated_holdout
+conda env create -f environment.yml
+conda activate peptide-affinity-models
 ```
 
-Model-specific entry points are listed in the table above. Scripts with a
-command-line interface can be run with `--help` to inspect additional options.
+## Reproduce the model comparison
 
-## Evaluation and reported results
+Run from the repository root:
 
-`results/all_models_per_seed_metrics.csv` contains the metrics for individual
-seeds, and `results/all_models_three_seed_summary.csv` contains the aggregated
-model comparison. Evaluation and figure-preparation utilities are provided in
-`evaluation/`.
+```bash
+python training/train_cnn_mlp_ridge.py --data data/pooled_extension_doped_htsk.csv
+python training/train_lstm_gbt.py --data data/pooled_extension_doped_htsk.csv
+COMPACT_TRANSFORMER_DATA=data/pooled_extension_doped_htsk.csv python training/train_compact_transformer.py
+python training/train_cfc.py --data data/pooled_extension_doped_htsk.csv --out outputs/cfc_repeated_holdout
+```
 
-Deposited trained checkpoints are stored under `models/`. The current archive
-includes the three CfC checkpoints used in the revised analysis, together with
-SHA-256 hashes. The training scripts permit the other compared models to be
-retrained using the documented splits and settings.
+The CfC training script defaults to all three seeds and saves a checkpoint,
+split assignment, training history, test predictions, and metrics for every
+trial, plus per-seed and mean/SD summary tables.
 
-## Diffusion-candidate prediction
+See `docs/reproducibility.md` for the complete workflow.
 
-The scripts under `prediction/` apply the predictive-model ensemble to peptide
-candidates generated by the diffusion workflow. Reference input formatting is
-illustrated by `docs/ddim_reference_template.csv`.
+## Deposited checkpoints and results
+
+The reviewer-requested trained CfC models are deposited in `checkpoints/cfc/`:
+
+- `CfC_seed42.pt`
+- `CfC_seed43.pt`
+- `CfC_seed44.pt`
+
+SHA-256 hashes are supplied in `checkpoints/cfc/SHA256SUMS.txt`. The other
+compared models can be retrained using their scripts and the shared
+configuration; this release does not claim that their checkpoints are
+deposited.
+
+Key result files are:
+
+- `results/per_seed_metrics.csv`;
+- `results/aggregate_metrics_mean_sd.csv`;
+- `results/predictions/cfc_test_predictions_seed42.csv`;
+- `results/predictions/cfc_test_predictions_seed43.csv`;
+- `results/predictions/cfc_test_predictions_seed44.csv`.
+
+To recompute the held-out CfC metrics and prediction tables directly from the
+deposited checkpoints:
+
+```bash
+python evaluation/evaluate_pretrained_cfc.py \
+  --data data/pooled_extension_doped_htsk.csv
+```
 
 ## Citation and archival release
 
 When citing this repository, please cite the associated manuscript and the
-versioned archival release. The GitHub release can be linked to Zenodo to
-provide a persistent DOI.
+versioned archival release. A GitHub release can be linked to Zenodo to provide
+a persistent DOI.

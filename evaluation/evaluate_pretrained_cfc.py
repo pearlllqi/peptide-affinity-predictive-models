@@ -17,9 +17,11 @@ def main():
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=Path, required=True)
-    parser.add_argument("--models", type=Path, default=root / "models" / "cfc")
+    parser.add_argument("--models", type=Path, default=root / "checkpoints" / "cfc")
     parser.add_argument("--out", type=Path,
                         default=root / "results" / "cfc_recomputed_metrics.csv")
+    parser.add_argument("--predictions-dir", type=Path,
+                        default=root / "results" / "predictions")
     parser.add_argument("--seeds", type=int, nargs="+", default=[42, 43, 44])
     args = parser.parse_args()
 
@@ -33,6 +35,7 @@ def main():
     ].reset_index(drop=True)
 
     rows = []
+    args.predictions_dir.mkdir(parents=True, exist_ok=True)
     for seed in args.seeds:
         data = raw.sample(frac=1, random_state=seed).reset_index(drop=True)
         test_start = int(0.70 * len(data)) + int(0.15 * len(data))
@@ -48,6 +51,15 @@ def main():
         prediction = prediction * checkpoint["target_std"] + checkpoint["target_mean"]
         actual = data["Delta_G"].iloc[test_start:].to_numpy(float)
         rows.append({"Seed": seed, "N_test": len(actual), **metrics(actual, prediction)})
+        pd.DataFrame({
+            "Sequence": data["Sequence"].iloc[test_start:].to_numpy(),
+            "Actual_Delta_G": actual,
+            "Predicted_Delta_G": prediction,
+            "Seed": seed,
+            "Model": "CfC",
+        }).to_csv(
+            args.predictions_dir / f"cfc_test_predictions_seed{seed}.csv", index=False
+        )
 
     result = pd.DataFrame(rows)
     args.out.parent.mkdir(parents=True, exist_ok=True)
