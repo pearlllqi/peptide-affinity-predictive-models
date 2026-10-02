@@ -1,44 +1,69 @@
-# Bcl-xL sequence-affinity modeling code
+# Peptide-affinity predictive models for Bcl-xL
 
-This archive contains the training and evaluation code, trained CfC checkpoints,
-and per-seed results supporting the revised manuscript, *Integrating Diffusion and
-Liquid AI Models for Predicting Peptide Affinity from mRNA Display Selections*.
+This repository contains the data, training code, evaluation utilities, model
+outputs, and per-seed results supporting the manuscript *Integrating Diffusion
+and Liquid AI Models for Predicting Peptide Affinity from mRNA Display
+Selections*.
 
-## Primary reproducibility workflow
+The code compares multiple sequence-based approaches for predicting peptide
+binding affinity:
+
+- convolutional neural network (CNN);
+- gradient-boosted decision trees (GBDT);
+- compact Transformer;
+- long short-term memory network (LSTM);
+- closed-form continuous network (CfC);
+- multilayer perceptron (MLP) and ridge-regression baselines.
+
+The repository also includes scripts for scoring diffusion-generated peptide
+candidates with the trained predictive models.
+
+## Study design
 
 The primary comparison uses 17,804 unique 20-residue peptide sequences with
-binding free energies between -16 and -12 kcal/mol. For each random seed (42,
-43, and 44), the rows are reshuffled and divided into 70% training, 15%
-validation, and 15% test partitions. Target standardization uses only the
-training subset. The reported values are the arithmetic mean and sample standard
-deviation across the three repeated holdout trials.
+experimental binding free energies from -16 to -12 kcal/mol. For each random
+seed (42, 43, and 44), the rows are reshuffled and divided into 70% training,
+15% validation, and 15% test partitions. Target standardization is calculated
+from the training subset only and reversed before evaluation.
 
-The manuscript CfC architecture is:
+All test metrics are calculated independently for the three repeated holdout
+trials and summarized as the arithmetic mean ± sample standard deviation. The
+reported metrics include MSE, RMSE, MAE, R², Pearson correlation, and Spearman
+rank correlation.
 
-`20x20 one-hot -> LayerNorm -> Dense32(tanh) -> CfC32 -> Dropout(0.20) -> Dense16(tanh) -> CfC16 -> Dropout(0.20) -> linear output`
+## Repository structure
 
-Training uses AdamW, learning rate 1e-4, weight decay 1e-4, batch size 64,
-Huber loss with delta 0.5, global gradient clipping at 1.0, and 70 epochs. No
-early stopping is used for the reported comparison; the final epoch-70 model is
-evaluated. PyTorch and ncps constructor defaults initialize the weights after
-setting the Python, NumPy, PyTorch, and data-loader seeds; no custom
-reinitialization is applied.
+```text
+data/          HTSK sequence-affinity dataset
+training/      training scripts for the compared predictive models
+evaluation/    metric compilation, checkpoint evaluation, and plotting tools
+prediction/    scripts for scoring diffusion-generated peptide candidates
+models/        deposited trained-model checkpoints
+results/       per-seed metrics and three-seed summaries
+docs/          example/reference input files
+```
 
-## Included trained model
+## Model training scripts
 
-`models/cfc/` contains the three CfC checkpoints used for the revised analysis:
+| Model or analysis | Script |
+| --- | --- |
+| CNN, MLP, and ridge regression | `training/train_cnn_mlp_ridge.py` |
+| LSTM and GBDT | `training/train_lstm_gbt.py` |
+| Compact Transformer | `training/train_compact_transformer.py` |
+| CfC | `training/train_cfc.py` |
+| Additional LSTM/Transformer analysis | `training/train_lstm_transformer.py` |
+| Extension-only exploratory baselines | `training/extension_*_baseline.py` |
 
-- `CfC_seed42.pt`
-- `CfC_seed43.pt`
-- `CfC_seed44.pt`
-
-Each checkpoint contains the model state dictionary and the training-set target
-mean and standard deviation required to reverse standardization. SHA-256 hashes
-are provided in `models/cfc/SHA256SUMS.txt`.
+The primary models use the same three random seeds and repeated 70:15:15
+holdout design. Neural-network training uses AdamW with a learning rate of
+`1e-4`, weight decay of `1e-4`, batch size 64, Huber loss with delta 0.5,
+global gradient-norm clipping at 1.0, and 70 epochs. GBDT hyperparameters are
+selected on the validation partition. See the individual scripts and manuscript
+Methods for model-specific architectures and settings.
 
 ## Installation
 
-Python 3.11 was used for the deposited run.
+Python 3.11 was used for the deposited analyses.
 
 ```bash
 python -m venv .venv
@@ -48,44 +73,47 @@ python -m pip install -r requirements.txt
 
 ## Input data
 
-The HTSK CSV must contain:
+The included file `data/htsk.csv` contains the sequence-affinity data used for
+the primary model comparison. The required columns are:
 
 - `Sequence`: exactly 20 standard amino-acid letters after removal of the
   initiating methionine;
 - `Delta_G`: experimental binding free energy in kcal/mol.
 
-The HTSK CSV supplied with the manuscript submission should be deposited in the
-same archival record as this code. The scripts require an explicit data path and
-do not contain author-specific absolute paths.
-
-## Reproduce the CfC analysis
-
-Train all three seeds and write checkpoints, histories, split assignments, test
-predictions, per-seed metrics, and the mean/SD summary:
+The primary training scripts use `data/htsk.csv` by default or accept a data
+path through a command-line option or environment variable. Example commands
+from the repository root are:
 
 ```bash
-python training/train_cfc.py --data /path/to/htsk.csv --out outputs/cfc_repeated_holdout
+python training/train_cnn_mlp_ridge.py --data data/htsk.csv
+python training/train_lstm_gbt.py --data data/htsk.csv
+COMPACT_TRANSFORMER_DATA=data/htsk.csv python training/train_compact_transformer.py
+python training/train_cfc.py --data data/htsk.csv --out outputs/cfc_repeated_holdout
 ```
 
-Recompute the test metrics from the deposited checkpoints:
+Model-specific entry points are listed in the table above. Scripts with a
+command-line interface can be run with `--help` to inspect additional options.
 
-```bash
-python evaluation/evaluate_pretrained_cfc.py --data /path/to/htsk.csv
-```
+## Evaluation and reported results
 
-The manuscript-level metrics used in Table 1 are included in `results/`.
+`results/all_models_per_seed_metrics.csv` contains the metrics for individual
+seeds, and `results/all_models_three_seed_summary.csv` contains the aggregated
+model comparison. Evaluation and figure-preparation utilities are provided in
+`evaluation/`.
 
-## Other models
+Deposited trained checkpoints are stored under `models/`. The current archive
+includes the three CfC checkpoints used in the revised analysis, together with
+SHA-256 hashes. The training scripts permit the other compared models to be
+retrained using the documented splits and settings.
 
-The remaining scripts reproduce the CNN, Ridge/MLP, GBDT, LSTM, compact
-Transformer, and DDIM-candidate analyses. They use the same seeds and repeated
-70:15:15 holdout convention unless a script explicitly identifies itself as an
-Extension-only exploratory analysis. The primary manuscript results should not
-be regenerated from the Extension-only scripts.
+## Diffusion-candidate prediction
 
-## Archival release
+The scripts under `prediction/` apply the predictive-model ensemble to peptide
+candidates generated by the diffusion workflow. Reference input formatting is
+illustrated by `docs/ddim_reference_template.csv`.
 
-Before public deposition, add the selected software license and replace the DOI
-placeholder in the manuscript and response letter with the DOI issued by Zenodo
-or an equivalent long-term repository. A GitHub repository can be linked to
-Zenodo to create a versioned DOI.
+## Citation and archival release
+
+When citing this repository, please cite the associated manuscript and the
+versioned archival release. The GitHub release can be linked to Zenodo to
+provide a persistent DOI.
