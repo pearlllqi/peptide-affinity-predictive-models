@@ -71,6 +71,8 @@ predictions, and test metrics. It also writes `cfc_per_seed_metrics.csv` and
   the reviewer and their SHA-256 hashes.
 - `results/per_seed_metrics.csv` contains the individual-seed metrics for the
   model comparison.
+- `results/all_models_per_seed_metrics.csv` contains the individual-seed
+  metrics for all five primary models, including the Compact Transformer.
 - `results/aggregate_metrics_mean_sd.csv` contains mean and sample SD across
   the three trials.
 - `results/predictions/cfc_test_predictions_seed*.csv` contains the held-out

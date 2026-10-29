@@ -131,6 +131,7 @@ Key result files are:
 
 - `results/per_seed_metrics.csv`;
 - `results/aggregate_metrics_mean_sd.csv`;
+- `results/all_models_per_seed_metrics.csv` (including Compact Transformer);
 - `results/predictions/cfc_test_predictions_seed42.csv`;
 - `results/predictions/cfc_test_predictions_seed43.csv`;
 - `results/predictions/cfc_test_predictions_seed44.csv`.
