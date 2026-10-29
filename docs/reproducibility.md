@@ -6,6 +6,10 @@ This release supports the three-seed comparison of CNN, GBDT, compact
 Transformer, LSTM, and CfC models reported in the manuscript. MLP and ridge
 regression are included as additional baselines. Seeds 42, 43, and 44 define
 three independently shuffled 70:15:15 train/validation/test partitions.
+For each seed, the supplied rows are shuffled using that seed and then split
+sequentially into 70% training, 15% validation, and 15% test rows. This rule,
+together with the supplied dataset and seed values, deterministically
+reconstructs the partitions; there is no additional random split step.
 
 ## Environment
 
@@ -41,7 +45,9 @@ deviation are calculated from the training partition only.
 
 `configs/mixed_dataset_config.yaml` records the shared split, optimization,
 architecture, initialization, regularization, and evaluation settings. The
-Python scripts remain the executable source of truth.
+Python scripts remain the executable source of truth. When a training script
+is run, it writes the seed-specific split assignment alongside the checkpoint,
+training history, held-out predictions, and metrics.
 
 ## Training
 
@@ -70,9 +76,12 @@ predictions, and test metrics. It also writes `cfc_per_seed_metrics.csv` and
 - `results/predictions/cfc_test_predictions_seed*.csv` contains the held-out
   CfC predictions recomputed from the deposited checkpoints.
 
-The other compared models are reproducible from their training scripts and the
-shared configuration. Their trained checkpoints are not claimed as deposited
-artifacts in this release.
+The other compared models are reproducible from their training scripts, the
+shared configuration, the supplied dataset, and the fixed seeds. Their
+checkpoints do not need to be downloaded in advance: each script regenerates
+the model, split assignment, checkpoint, predictions, and metrics in its output
+directory. The deposited CfC checkpoints are additionally provided so that the
+reported CfC predictions can be verified directly without retraining.
 
 ## Verify the deposited CfC checkpoints
 

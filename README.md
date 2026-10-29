@@ -28,7 +28,10 @@ reversed before evaluation.
 
 MSE, RMSE, MAE, R², Pearson correlation, and Spearman correlation are computed
 separately on each held-out test partition and summarized as the arithmetic
-mean ± sample standard deviation across the three trials.
+mean ± sample standard deviation across the three trials. The partitions are
+reconstructed deterministically by each script from the supplied dataset:
+rows are shuffled with the stated seed and assigned sequentially to 70%
+training, 15% validation, and 15% test. No additional random split is used.
 
 ## Repository contents
 
@@ -101,8 +104,10 @@ python training/train_cfc.py --data data/pooled_extension_doped_htsk.csv --out o
 ```
 
 The CfC training script defaults to all three seeds and saves a checkpoint,
-split assignment, training history, test predictions, and metrics for every
-trial, plus per-seed and mean/SD summary tables.
+the deterministic split assignment, training history, test predictions, and
+metrics for every trial, plus per-seed and mean/SD summary tables. The other
+model scripts use the same deterministic split procedure and regenerate their
+per-seed checkpoints, predictions, and metrics when run.
 
 See `docs/reproducibility.md` for the complete workflow.
 
@@ -114,10 +119,13 @@ The reviewer-requested trained CfC models are deposited in `checkpoints/cfc/`:
 - `CfC_seed43.pt`
 - `CfC_seed44.pt`
 
-SHA-256 hashes are supplied in `checkpoints/cfc/SHA256SUMS.txt`. The other
-compared models can be retrained using their scripts and the shared
-configuration; this release does not claim that their checkpoints are
-deposited.
+SHA-256 hashes are supplied in `checkpoints/cfc/SHA256SUMS.txt`. The CfC
+checkpoint files allow direct reproduction of the reported CfC predictions
+without retraining. The CNN, GBDT, compact Transformer, and LSTM results are
+reproduced by running the supplied training scripts with the supplied data,
+configuration, and fixed seeds; those scripts save the corresponding
+per-seed checkpoints, split assignments, predictions, and metrics in the
+specified output directory.
 
 Key result files are:
 
